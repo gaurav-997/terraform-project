@@ -1,0 +1,78 @@
+pipeline{
+    agent any
+    tools{
+        jdk 'java17'
+        terraform 'terraform'
+    }
+    environment{
+        SCANNER_HOME=tool 'sonar-scanner'
+    }
+    stages{
+        stage("clean workspace"){
+            steps{
+                echo "========executing workspace cleanup========"
+                cleanWs()
+                
+            }
+        }
+        stage("check out form git"){
+            steps{
+                echo "========executing check out form git ========"
+                git branch: 'main' , url: 'https://github.com/gaurav-997/TERRAFORM-JENKINS-CICD.git'
+            }
+        }
+        stage("terraform version"){
+            steps{
+                echo "========executing terraform version========"
+                sh 'terraform --version'
+            }
+        }
+        stage("sonar analysis"){
+            steps{
+                echo "========executing sonar analysis========"
+                withSonarQubeEnv('sonar-server') {
+                    sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=Terraform \
+                    -Dsonar.projectKey=Terraform '''
+                }
+            }
+        }
+        stage("quality gates"){
+            steps{
+                echo "========executing quality gates========"
+                waitForQualityGate abortPipeline: false, credentialsId: 'sonar-token'
+            }
+        }
+        stage("trivy file scan"){
+            steps{
+                echo "========executing trivy file scan========"
+                sh "trivy fs . >trivyfs.txt"
+            }
+        }
+        stage("permission to website files"){
+            steps{
+                echo "========executing permission to website files========"
+                sh 'chmod 777 website.sh' 
+            }
+        }
+        stage("terraform init"){
+            steps{
+                echo "========executing terraform init========"
+                sh 'teraform fmt'
+                sh 'terraform validate'
+                sh 'terraform init'
+            }
+        }
+        stage("terraform plan"){
+            steps{
+                echo "========executing terraform plan========"
+                sh 'terraform plan'
+            }
+        }
+        stage("terraform action"){
+            steps{
+                echo "========for terraform apply & destroy we are using parametrise way ========"
+                sh 'terraform ${action} --auto-approve'
+            }
+        }
+    }
+}
