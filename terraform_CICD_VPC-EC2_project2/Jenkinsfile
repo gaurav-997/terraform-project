@@ -1,0 +1,45 @@
+pipeline{
+    agent any
+    stages{
+        stage("clean workspace"){
+            steps{
+                echo "========executing workspace cleanup========"
+                cleanWs()
+                
+            }
+        }
+        stage("check out form git"){
+            steps{
+                echo "========executing check out form git ========"
+                git branch: 'main' , url: 'https://github.com/gaurav-997/terraform.git'
+            }
+        }
+        stage("terraform version"){
+            steps{
+                echo "========executing terraform version========"
+                sh 'terraform --version'
+            }
+        }
+        stage("validate"){
+            steps{
+                echo "========executing validate terraform========"
+                sh "terraform fmt"
+                sh "terraform validate"
+                sh "terraform init"
+            }
+        }
+        stage("plan"){
+            steps{
+                echo "========executing terraform plan========"
+                sh "terraform plan"
+            }
+        }
+        stage("terraform action"){
+            steps{
+                echo "========for terraform apply & destroy we are using parametrise way========"
+                sh "terraform ${action} --auto-approve"
+            }
+        }
+        
+    }
+}
